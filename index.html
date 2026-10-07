@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
-<title>Olivarez Golf Cup 2026 — QR Attendance</title>
+<title>Event QR Attendance</title>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
@@ -720,8 +720,141 @@ function checkPlayer(raw) {
     return;
   }
 
-  const now =
-    Date.now();
+  const now = Date.now();
+
+  // Prevent repeated QR scans
+  if (
+    busy ||
+    (
+      code === lastCode &&
+      now - lastTime < 3500
+    )
+  ) {
+    return;
+  }
+
+  // Verify scanner configuration
+  if (!SCANNER_KEY) {
+
+    setResult(
+      "error",
+      "<b>SCANNER KEY NOT CONFIGURED</b>"
+    );
+
+    return;
+  }
+
+  busy = true;
+  lastCode = code;
+  lastTime = now;
+
+  if (navigator.vibrate) {
+    navigator.vibrate(80);
+  }
+
+  setResult(
+    "info",
+    "Checking " + esc(code) + "..."
+  );
+
+  const callbackName =
+    "ogc_" +
+    Date.now() +
+    "_" +
+    Math.floor(
+      Math.random() * 100000
+    );
+
+  const script =
+    document.createElement("script");
+
+  let timer =
+    setTimeout(function() {
+
+      finishError(
+        "Attendance server did not respond."
+      );
+
+    }, 15000);
+
+
+  function cleanup() {
+
+    clearTimeout(timer);
+
+    try {
+      delete window[callbackName];
+    } catch (e) {}
+
+    if (script.parentNode) {
+      script.remove();
+    }
+
+  }
+
+
+  function finishError(message) {
+
+    cleanup();
+
+    busy = false;
+
+    setResult(
+      "error",
+      "<b>CONNECTION ERROR</b><br>" +
+      esc(message)
+    );
+
+  }
+
+
+  window[callbackName] =
+    function(data) {
+
+      cleanup();
+
+      displayResult(
+        data || {
+          ok: false,
+          message:
+            "Invalid server response."
+        }
+      );
+
+    };
+
+
+  script.onerror =
+    function() {
+
+      finishError(
+        "Could not connect to the Apps Script attendance server."
+      );
+
+    };
+
+
+  const params =
+    new URLSearchParams({
+      action: "checkin",
+      code: code,
+      device: "External QR Scanner",
+      key: SCANNER_KEY,
+      callback: callbackName
+    });
+
+
+  script.src =
+    API_URL +
+    "?" +
+    params.toString();
+
+
+  document.body.appendChild(
+    script
+  );
+
+}
 
   /***********************************************
    * PREVENT RAPID DUPLICATE SCANS
