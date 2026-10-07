@@ -1,0 +1,1440 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+
+<title>
+Olivarez Golf Cup 2026 — QR Attendance
+</title>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f3f6fa;
+  font-family: Arial, sans-serif;
+  color: #17365d;
+  padding: 14px;
+}
+
+.wrap {
+  max-width: 540px;
+  margin: auto;
+}
+
+.card {
+  background: white;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 5px 20px #0002;
+}
+
+h1 {
+  text-align: center;
+  font-size: 22px;
+  margin: 4px 0;
+}
+
+h2 {
+  text-align: center;
+  font-size: 14px;
+  margin: 6px 0 18px;
+}
+
+#reader {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #000;
+}
+
+button,
+input,
+select {
+  width: 100%;
+  padding: 13px;
+  margin-top: 9px;
+  border-radius: 11px;
+  font-size: 16px;
+}
+
+button {
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  background: #17365d;
+  color: white;
+}
+
+.secondary {
+  background: #e8eef6;
+  color: #17365d;
+}
+
+.stop {
+  background: #8d2020;
+  color: white;
+}
+
+input,
+select {
+  border: 1px solid #bbb;
+  background: white;
+}
+
+.controls {
+  display: none;
+}
+
+.result {
+  display: none;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.info {
+  display: block;
+  background: #e7eff8;
+  color: #17365d;
+}
+
+.success {
+  display: block;
+  background: #dff3e4;
+  color: #176b2c;
+}
+
+.duplicate {
+  display: block;
+  background: #fff3cd;
+  color: #725000;
+}
+
+.payment {
+  display: block;
+  background: #fde5e5;
+  color: #9b0000;
+}
+
+.error {
+  display: block;
+  background: #fde5e5;
+  color: #9b0000;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 8px;
+}
+
+.details {
+  margin-top: 8px;
+  line-height: 1.7;
+}
+
+.manual {
+  border-top: 1px solid #ddd;
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+.small {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #667;
+}
+
+.debug {
+  font-size: 11px;
+  color: #777;
+  word-break: break-word;
+  margin-top: 8px;
+}
+
+.scanning-disabled {
+  opacity: .55;
+  pointer-events: none;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="wrap">
+
+<div class="card">
+
+<h1>
+THE OLIVAREZ GOLF CUP 2026
+</h1>
+
+<h2>
+QR ATTENDANCE SCANNER
+</h2>
+
+
+<div id="reader"></div>
+
+
+<button
+  id="startBtn"
+  class="primary"
+  onclick="startCamera()"
+>
+📷 START CAMERA
+</button>
+
+
+<div
+  id="controls"
+  class="controls"
+>
+
+<select
+  id="cameraSelect"
+  onchange="chooseCamera(this.value)"
+></select>
+
+<button
+  class="secondary"
+  onclick="searchCameras()"
+>
+🔍 SEARCH CAMERAS
+</button>
+
+<button
+  id="switchBtn"
+  class="secondary"
+  onclick="switchCamera()"
+>
+🔄 SWITCH CAMERA
+</button>
+
+<button
+  class="stop"
+  onclick="stopCamera()"
+>
+■ STOP CAMERA
+</button>
+
+</div>
+
+
+<div
+  id="result"
+  class="result"
+></div>
+
+<div
+  id="debug"
+  class="debug"
+></div>
+
+
+<div class="manual">
+
+<b>Backup Check-In</b>
+
+<div class="small">
+Enter the QR / Guest ID if camera scanning is unavailable.
+</div>
+
+<input
+  id="manualCode"
+  placeholder="EVT-0001"
+  autocomplete="off"
+  onkeydown="
+    if(event.key === 'Enter') {
+      manualCheckIn();
+    }
+  "
+>
+
+<button
+  class="secondary"
+  onclick="manualCheckIn()"
+>
+CHECK IN PLAYER
+</button>
+
+</div>
+
+
+</div>
+</div>
+
+
+<script>
+
+/*************************************************
+ * SYSTEM CONFIGURATION
+ *************************************************/
+
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbyOetfDjK8K__uXL-D8e6KFR9bDU62H8GXvy6v03Ianfdmd97qLAZvrNQq_MYBh-s0/exec";
+
+const SCANNER_KEY =
+  "DarsAttendanceFile";
+
+
+/*************************************************
+ * SCANNER VARIABLES
+ *************************************************/
+
+let qr = null;
+
+let cameras = [];
+
+let current = 0;
+
+let busy = false;
+
+let lastCode = "";
+
+let lastTime = 0;
+
+
+/*************************************************
+ * RESULT DISPLAY
+ *************************************************/
+
+function setResult(
+  cls,
+  html
+) {
+
+  const result =
+    document.getElementById(
+      "result"
+    );
+
+  result.className =
+    "result " + cls;
+
+  result.innerHTML =
+    html;
+
+  result.style.display =
+    "block";
+
+}
+
+
+/*************************************************
+ * ESCAPE HTML
+ *************************************************/
+
+function esc(value) {
+
+  return String(
+    value ?? ""
+  ).replace(
+    /[&<>"']/g,
+    function(character) {
+
+      return {
+
+        "&": "&amp;",
+
+        "<": "&lt;",
+
+        ">": "&gt;",
+
+        '"': "&quot;",
+
+        "'": "&#39;"
+
+      }[character];
+
+    }
+  );
+
+}
+
+
+/*************************************************
+ * START CAMERA
+ *************************************************/
+
+async function startCamera() {
+
+  document
+    .getElementById(
+      "debug"
+    )
+    .textContent = "";
+
+  if (
+    !navigator.mediaDevices ||
+    !navigator.mediaDevices.getUserMedia
+  ) {
+
+    return cameraError(
+      new Error(
+        "Camera API is not supported by this browser."
+      )
+    );
+
+  }
+
+  try {
+
+    setResult(
+      "info",
+      "Requesting camera permission..."
+    );
+
+    const stream =
+      await navigator.mediaDevices
+        .getUserMedia({
+          video: {
+            facingMode: {
+              ideal: "environment"
+            }
+          },
+          audio: false
+        });
+
+    stream
+      .getTracks()
+      .forEach(
+        function(track) {
+          track.stop();
+        }
+      );
+
+    await searchCameras(false);
+
+    if (!cameras.length) {
+
+      throw new Error(
+        "No camera detected."
+      );
+
+    }
+
+    /*********************************************
+     * PREFER REAR CAMERA
+     *********************************************/
+
+    const rear =
+      cameras.findIndex(
+        function(camera) {
+
+          return /back|rear|environment|world/i
+            .test(
+              camera.label || ""
+            );
+
+        }
+      );
+
+    current =
+      rear >= 0
+        ? rear
+        : (
+            cameras.length > 1
+              ? cameras.length - 1
+              : 0
+          );
+
+    fillCameraList();
+
+    await openCamera();
+
+  } catch (error) {
+
+    cameraError(error);
+
+  }
+
+}
+
+
+/*************************************************
+ * SEARCH CAMERAS
+ *************************************************/
+
+async function searchCameras(
+  open = true
+) {
+
+  try {
+
+    cameras =
+      (
+        await Html5Qrcode
+          .getCameras()
+      ) || [];
+
+    fillCameraList();
+
+    if (!cameras.length) {
+
+      throw new Error(
+        "No camera detected."
+      );
+
+    }
+
+    if (open) {
+
+      current =
+        Math.min(
+          current,
+          cameras.length - 1
+        );
+
+      await openCamera();
+
+    }
+
+  } catch (error) {
+
+    cameraError(error);
+
+  }
+
+}
+
+
+/*************************************************
+ * BUILD CAMERA LIST
+ *************************************************/
+
+function fillCameraList() {
+
+  const select =
+    document.getElementById(
+      "cameraSelect"
+    );
+
+  select.innerHTML = "";
+
+  cameras.forEach(
+    function(camera, index) {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value =
+        index;
+
+      option.textContent =
+        camera.label ||
+        (
+          "Camera " +
+          (index + 1)
+        );
+
+      option.selected =
+        index === current;
+
+      select.appendChild(
+        option
+      );
+
+    }
+  );
+
+  document
+    .getElementById(
+      "controls"
+    )
+    .style.display =
+      cameras.length
+        ? "block"
+        : "none";
+
+  document
+    .getElementById(
+      "switchBtn"
+    )
+    .style.display =
+      cameras.length > 1
+        ? "block"
+        : "none";
+
+}
+
+
+/*************************************************
+ * OPEN CAMERA
+ *************************************************/
+
+async function openCamera() {
+
+  try {
+
+    if (qr) {
+
+      try {
+
+        if (qr.isScanning) {
+          await qr.stop();
+        }
+
+      } catch (error) {}
+
+      try {
+        qr.clear();
+      } catch (error) {}
+
+    }
+
+
+    qr =
+      new Html5Qrcode(
+        "reader"
+      );
+
+
+    const camera =
+      cameras[current];
+
+
+    if (!camera) {
+
+      throw new Error(
+        "Selected camera is unavailable."
+      );
+
+    }
+
+
+    setResult(
+      "info",
+      "Opening " +
+      esc(
+        camera.label ||
+        "camera"
+      ) +
+      "..."
+    );
+
+
+    await qr.start(
+
+      camera.id,
+
+      {
+
+        fps: 10,
+
+        qrbox:
+          function(
+            width,
+            height
+          ) {
+
+            const size =
+              Math.floor(
+                Math.min(
+                  width,
+                  height
+                ) * 0.70
+              );
+
+            return {
+              width: size,
+              height: size
+            };
+
+          },
+
+        aspectRatio: 1
+
+      },
+
+      function(decodedText) {
+
+        checkPlayer(
+          decodedText
+        );
+
+      },
+
+      function() {
+
+        // Ignore normal scan misses.
+
+      }
+
+    );
+
+
+    document
+      .getElementById(
+        "startBtn"
+      )
+      .style.display =
+        "none";
+
+
+    document
+      .getElementById(
+        "controls"
+      )
+      .style.display =
+        "block";
+
+
+    setResult(
+      "info",
+      "Camera ready — scan a participant QR code."
+    );
+
+
+  } catch (error) {
+
+    cameraError(error);
+
+  }
+
+}
+
+
+/*************************************************
+ * CHOOSE CAMERA
+ *************************************************/
+
+async function chooseCamera(
+  index
+) {
+
+  current =
+    Number(index);
+
+  await openCamera();
+
+}
+
+
+/*************************************************
+ * SWITCH CAMERA
+ *************************************************/
+
+async function switchCamera() {
+
+  if (
+    cameras.length < 2
+  ) {
+    return;
+  }
+
+  current =
+    (
+      current + 1
+    ) %
+    cameras.length;
+
+  fillCameraList();
+
+  await openCamera();
+
+}
+
+
+/*************************************************
+ * STOP CAMERA
+ *************************************************/
+
+async function stopCamera() {
+
+  try {
+
+    if (
+      qr &&
+      qr.isScanning
+    ) {
+
+      await qr.stop();
+
+    }
+
+    if (qr) {
+
+      qr.clear();
+
+    }
+
+  } catch (error) {}
+
+
+  document
+    .getElementById(
+      "startBtn"
+    )
+    .style.display =
+      "block";
+
+
+  document
+    .getElementById(
+      "controls"
+    )
+    .style.display =
+      "none";
+
+
+  setResult(
+    "info",
+    "Camera stopped."
+  );
+
+}
+
+
+/*************************************************
+ * MANUAL CHECK-IN
+ *************************************************/
+
+function manualCheckIn() {
+
+  const input =
+    document.getElementById(
+      "manualCode"
+    );
+
+  const value =
+    input.value.trim();
+
+
+  if (!value) {
+
+    return setResult(
+      "error",
+      "<b>Enter a QR / Guest ID.</b>"
+    );
+
+  }
+
+
+  input.value = "";
+
+
+  checkPlayer(
+    value
+  );
+
+}
+
+
+/*************************************************
+ * CHECK PLAYER
+ *************************************************/
+
+function checkPlayer(raw) {
+
+  const code =
+    String(
+      raw || ""
+    )
+    .trim()
+    .toUpperCase();
+
+
+  if (!code) {
+    return;
+  }
+
+
+  const now =
+    Date.now();
+
+
+  /***********************************************
+   * PREVENT RAPID DUPLICATE SCANS
+   ***********************************************/
+
+  if (busy) {
+    return;
+  }
+
+
+  if (
+    code === lastCode &&
+    now - lastTime < 5000
+  ) {
+    return;
+  }
+
+
+  /***********************************************
+   * VERIFY LOCAL CONFIG
+   ***********************************************/
+
+  if (!SCANNER_KEY) {
+
+    return setResult(
+      "error",
+      "<b>SCANNER KEY NOT CONFIGURED.</b>"
+    );
+
+  }
+
+
+  busy = true;
+
+  lastCode =
+    code;
+
+  lastTime =
+    now;
+
+
+  if (
+    navigator.vibrate
+  ) {
+
+    navigator.vibrate(
+      80
+    );
+
+  }
+
+
+  setResult(
+    "info",
+    "Checking " +
+    esc(code) +
+    "..."
+  );
+
+
+  /***********************************************
+   * JSONP CALLBACK
+   ***********************************************/
+
+  const callback =
+    "attendance_" +
+    Date.now() +
+    "_" +
+    Math.floor(
+      Math.random() *
+      100000
+    );
+
+
+  const script =
+    document.createElement(
+      "script"
+    );
+
+
+  let timer =
+    setTimeout(
+      function() {
+
+        finishError(
+          "Attendance server did not respond."
+        );
+
+      },
+      15000
+    );
+
+
+  function cleanup() {
+
+    clearTimeout(
+      timer
+    );
+
+    try {
+
+      delete window[
+        callback
+      ];
+
+    } catch (error) {}
+
+
+    if (
+      script.parentNode
+    ) {
+
+      script.remove();
+
+    }
+
+  }
+
+
+  function finishError(
+    message
+  ) {
+
+    cleanup();
+
+    busy =
+      false;
+
+    setResult(
+      "error",
+      "<b>CONNECTION ERROR</b><br>" +
+      esc(message)
+    );
+
+  }
+
+
+  window[
+    callback
+  ] =
+    function(data) {
+
+      cleanup();
+
+      displayResult(
+        data || {
+          ok: false,
+          message:
+            "Invalid server response."
+        }
+      );
+
+    };
+
+
+  script.onerror =
+    function() {
+
+      finishError(
+        "Could not connect to the attendance server."
+      );
+
+    };
+
+
+  const params =
+    new URLSearchParams({
+
+      action:
+        "checkin",
+
+      code:
+        code,
+
+      device:
+        "GitHub QR Scanner",
+
+      key:
+        SCANNER_KEY,
+
+      callback:
+        callback
+
+    });
+
+
+  script.src =
+    API_URL +
+    "?" +
+    params.toString();
+
+
+  document.body
+    .appendChild(
+      script
+    );
+
+}
+
+
+/*************************************************
+ * DISPLAY SERVER RESULT
+ *************************************************/
+
+function displayResult(data) {
+
+
+  /***********************************************
+   * SUCCESS
+   ***********************************************/
+
+  if (data.ok) {
+
+    let location = "";
+
+    if (
+      data.table ||
+      data.seat
+    ) {
+
+      location =
+        "<div class='details'>" +
+
+        (
+          data.table
+            ? "<b>TABLE:</b> " +
+              esc(data.table)
+            : ""
+        ) +
+
+        (
+          data.table &&
+          data.seat
+            ? " &nbsp; | &nbsp; "
+            : ""
+        ) +
+
+        (
+          data.seat
+            ? "<b>SEAT:</b> " +
+              esc(data.seat)
+            : ""
+        ) +
+
+        "</div>";
+
+    }
+
+
+    setResult(
+
+      "success",
+
+      "<b>✅ " +
+      esc(
+        data.message ||
+        "CHECK-IN SUCCESSFUL"
+      ) +
+      "</b>" +
+
+      "<div class='name'>" +
+      esc(data.name) +
+      "</div>" +
+
+      "<b>GUEST ID:</b> " +
+      esc(data.id) +
+
+      "<br><b>PAYMENT:</b> " +
+      esc(
+        data.payment ||
+        "N/A"
+      ) +
+
+      location +
+
+      "<div class='details'>" +
+      "<b>CHECK-IN:</b> " +
+      esc(
+        data.time ||
+        ""
+      ) +
+      "</div>"
+
+    );
+
+
+    if (
+      navigator.vibrate
+    ) {
+
+      navigator.vibrate(
+        [100, 70, 100]
+      );
+
+    }
+
+  }
+
+
+  /***********************************************
+   * DUPLICATE
+   ***********************************************/
+
+  else if (
+    data.status ===
+    "duplicate"
+  ) {
+
+    setResult(
+
+      "duplicate",
+
+      "<b>⚠️ ALREADY CHECKED IN</b>" +
+
+      "<div class='name'>" +
+      esc(data.name) +
+      "</div>" +
+
+      "<b>GUEST ID:</b> " +
+      esc(data.id) +
+
+      "<br><b>PAYMENT:</b> " +
+      esc(
+        data.payment ||
+        "N/A"
+      ) +
+
+      (
+        data.table
+          ? "<br><b>TABLE:</b> " +
+            esc(data.table)
+          : ""
+      ) +
+
+      (
+        data.seat
+          ? " &nbsp; <b>SEAT:</b> " +
+            esc(data.seat)
+          : ""
+      ) +
+
+      "<br><b>FIRST CHECK-IN:</b> " +
+      esc(
+        data.firstCheckIn ||
+        ""
+      )
+
+    );
+
+  }
+
+
+  /***********************************************
+   * PAYMENT REQUIRED
+   ***********************************************/
+
+  else if (
+    data.status ===
+    "payment_required"
+  ) {
+
+    setResult(
+
+      "payment",
+
+      "<b>⛔ PAYMENT REQUIRED</b>" +
+
+      "<div class='name'>" +
+      esc(data.name) +
+      "</div>" +
+
+      "<b>GUEST ID:</b> " +
+      esc(data.id) +
+
+      "<br><b>PAYMENT STATUS:</b> " +
+      esc(
+        data.payment ||
+        "UNPAID"
+      ) +
+
+      "<br><br>" +
+
+      "<b>CHECK-IN NOT ALLOWED</b>" +
+
+      "<br>Please proceed to the payment area."
+
+    );
+
+
+    if (
+      navigator.vibrate
+    ) {
+
+      navigator.vibrate(
+        [250, 100, 250]
+      );
+
+    }
+
+  }
+
+
+  /***********************************************
+   * UNAUTHORIZED SCANNER
+   ***********************************************/
+
+  else if (
+    data.status ===
+    "unauthorized"
+  ) {
+
+    setResult(
+
+      "error",
+
+      "<b>⛔ UNAUTHORIZED SCANNER</b>" +
+      "<br>Please check the scanner key."
+
+    );
+
+  }
+
+
+  /***********************************************
+   * NOT FOUND / OTHER ERROR
+   ***********************************************/
+
+  else {
+
+    setResult(
+
+      "error",
+
+      "<b>❌ " +
+      esc(
+        data.message ||
+        "CHECK-IN FAILED"
+      ) +
+      "</b>" +
+
+      (
+        data.name
+          ? "<div class='name'>" +
+            esc(data.name) +
+            "</div>"
+          : ""
+      ) +
+
+      (
+        data.id
+          ? "<br>" +
+            esc(data.id)
+          : ""
+      )
+
+    );
+
+  }
+
+
+  /***********************************************
+   * SCAN LOCK
+   *
+   * Keep result visible and prevent camera from
+   * immediately scanning the same QR repeatedly.
+   ***********************************************/
+
+  setTimeout(
+    function() {
+
+      busy =
+        false;
+
+    },
+    3000
+  );
+
+}
+
+
+/*************************************************
+ * CAMERA ERROR
+ *************************************************/
+
+function cameraError(error) {
+
+  const name =
+    error &&
+    error.name
+      ? error.name
+      : "";
+
+  const message =
+    error &&
+    error.message
+      ? error.message
+      : String(error);
+
+
+  let help =
+    "Press START CAMERA again or use manual check-in.";
+
+
+  if (
+    name ===
+    "NotAllowedError" ||
+    /permission|denied/i.test(
+      message
+    )
+  ) {
+
+    help =
+      "Camera permission was denied. Allow camera access for this website and press START CAMERA again.";
+
+  }
+
+  else if (
+    name ===
+    "NotFoundError"
+  ) {
+
+    help =
+      "No camera was found on this device.";
+
+  }
+
+  else if (
+    name ===
+    "NotReadableError"
+  ) {
+
+    help =
+      "The camera may already be in use by another app. Close the other app and try again.";
+
+  }
+
+
+  setResult(
+
+    "error",
+
+    "<b>CAMERA ERROR</b><br>" +
+    esc(help)
+
+  );
+
+
+  document
+    .getElementById(
+      "debug"
+    )
+    .textContent =
+      "Browser error: " +
+      name +
+      " — " +
+      message;
+
+
+  document
+    .getElementById(
+      "startBtn"
+    )
+    .style.display =
+      "block";
+
+}
+
+</script>
+
+</body>
+</html>
