@@ -699,21 +699,30 @@ async function openCamera(){
 
 
     document
-      .getElementById("startBtn")
-      .style.display =
-        "none";
+  .getElementById("startBtn")
+  .style.display =
+    "none";
 
 
-    document
-      .getElementById("controls")
-      .style.display =
-        "flex";
+document
+  .getElementById("controls")
+  .style.display =
+    "flex";
 
 
-    setResult(
-      "info",
-      "Camera ready — scan a player QR code."
-    );
+/*
+ * Clear any old camera error message
+ * after camera opens successfully.
+ */
+document
+  .getElementById("debug")
+  .textContent = "";
+
+
+setResult(
+  "info",
+  "Camera ready — scan a player QR code."
+);
 
   }catch(error){
 
