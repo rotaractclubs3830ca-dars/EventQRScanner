@@ -1,23 +1,14 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1,viewport-fit=cover"
->
-
-<title>
-Olivarez Golf Cup 2026 — QR Attendance
-</title>
+<title>Olivarez Golf Cup 2026 — QR Attendance</title>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
-
 * {
   box-sizing: border-box;
 }
@@ -170,120 +161,85 @@ select {
   word-break: break-word;
   margin-top: 8px;
 }
-
-.scanning-disabled {
-  opacity: .55;
-  pointer-events: none;
-}
-
 </style>
-
 </head>
-
 
 <body>
 
 <div class="wrap">
+  <div class="card">
 
-<div class="card">
+    <h1>THE OLIVAREZ GOLF CUP 2026</h1>
+    <h2>QR ATTENDANCE SCANNER</h2>
 
-<h1>
-THE OLIVAREZ GOLF CUP 2026
-</h1>
+    <div id="reader"></div>
 
-<h2>
-QR ATTENDANCE SCANNER
-</h2>
+    <button
+      id="startBtn"
+      class="primary"
+      onclick="startCamera()">
+      📷 START CAMERA
+    </button>
 
+    <div id="controls" class="controls">
 
-<div id="reader"></div>
+      <select
+        id="cameraSelect"
+        onchange="chooseCamera(this.value)">
+      </select>
 
+      <button
+        class="secondary"
+        onclick="searchCameras()">
+        🔍 SEARCH CAMERAS
+      </button>
 
-<button
-  id="startBtn"
-  class="primary"
-  onclick="startCamera()"
->
-📷 START CAMERA
-</button>
+      <button
+        id="switchBtn"
+        class="secondary"
+        onclick="switchCamera()">
+        🔄 SWITCH CAMERA
+      </button>
 
+      <button
+        class="stop"
+        onclick="stopCamera()">
+        ■ STOP CAMERA
+      </button>
 
-<div
-  id="controls"
-  class="controls"
->
+    </div>
 
-<select
-  id="cameraSelect"
-  onchange="chooseCamera(this.value)"
-></select>
+    <div id="result" class="result"></div>
 
-<button
-  class="secondary"
-  onclick="searchCameras()"
->
-🔍 SEARCH CAMERAS
-</button>
+    <div id="debug" class="debug"></div>
 
-<button
-  id="switchBtn"
-  class="secondary"
-  onclick="switchCamera()"
->
-🔄 SWITCH CAMERA
-</button>
+    <div class="manual">
 
-<button
-  class="stop"
-  onclick="stopCamera()"
->
-■ STOP CAMERA
-</button>
+      <b>Backup Check-In</b>
 
-</div>
+      <div class="small">
+        Enter the QR / Guest ID if camera scanning is unavailable.
+      </div>
 
+      <input
+        id="manualCode"
+        placeholder="EVT-0001"
+        autocomplete="off"
+        onkeydown="
+          if(event.key === 'Enter') {
+            manualCheckIn();
+          }
+        ">
 
-<div
-  id="result"
-  class="result"
-></div>
+      <button
+        class="secondary"
+        onclick="manualCheckIn()">
+        CHECK IN PLAYER
+      </button>
 
-<div
-  id="debug"
-  class="debug"
-></div>
+    </div>
 
-
-<div class="manual">
-
-<b>Backup Check-In</b>
-
-<div class="small">
-Enter the QR / Guest ID if camera scanning is unavailable.
-</div>
-
-<input
-  id="manualCode"
-  placeholder="EVT-0001"
-  autocomplete="off"
-  onkeydown="
-    if(event.key === 'Enter') {
-      manualCheckIn();
-    }
-  "
->
-
-<button
-  class="secondary"
-  onclick="manualCheckIn()"
->
-CHECK IN PLAYER
-</button>
-
-</div>
-
-
-</div>
+  </div>
 </div>
 
 
@@ -305,15 +261,10 @@ const SCANNER_KEY =
  *************************************************/
 
 let qr = null;
-
 let cameras = [];
-
 let current = 0;
-
 let busy = false;
-
 let lastCode = "";
-
 let lastTime = 0;
 
 
@@ -321,15 +272,10 @@ let lastTime = 0;
  * RESULT DISPLAY
  *************************************************/
 
-function setResult(
-  cls,
-  html
-) {
+function setResult(cls, html) {
 
   const result =
-    document.getElementById(
-      "result"
-    );
+    document.getElementById("result");
 
   result.className =
     "result " + cls;
@@ -339,7 +285,6 @@ function setResult(
 
   result.style.display =
     "block";
-
 }
 
 
@@ -349,29 +294,21 @@ function setResult(
 
 function esc(value) {
 
-  return String(
-    value ?? ""
-  ).replace(
-    /[&<>"']/g,
-    function(character) {
+  return String(value ?? "")
+    .replace(
+      /[&<>"']/g,
+      function(character) {
 
-      return {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[character];
 
-        "&": "&amp;",
-
-        "<": "&lt;",
-
-        ">": "&gt;",
-
-        '"': "&quot;",
-
-        "'": "&#39;"
-
-      }[character];
-
-    }
-  );
-
+      }
+    );
 }
 
 
@@ -382,9 +319,7 @@ function esc(value) {
 async function startCamera() {
 
   document
-    .getElementById(
-      "debug"
-    )
+    .getElementById("debug")
     .textContent = "";
 
   if (
@@ -397,7 +332,6 @@ async function startCamera() {
         "Camera API is not supported by this browser."
       )
     );
-
   }
 
   try {
@@ -408,37 +342,28 @@ async function startCamera() {
     );
 
     const stream =
-      await navigator.mediaDevices
-        .getUserMedia({
-          video: {
-            facingMode: {
-              ideal: "environment"
-            }
-          },
-          audio: false
-        });
+      await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: {
+            ideal: "environment"
+          }
+        },
+        audio: false
+      });
 
     stream
       .getTracks()
-      .forEach(
-        function(track) {
-          track.stop();
-        }
-      );
+      .forEach(function(track) {
+        track.stop();
+      });
 
     await searchCameras(false);
 
     if (!cameras.length) {
-
       throw new Error(
         "No camera detected."
       );
-
     }
-
-    /*********************************************
-     * PREFER REAR CAMERA
-     *********************************************/
 
     const rear =
       cameras.findIndex(
@@ -448,7 +373,6 @@ async function startCamera() {
             .test(
               camera.label || ""
             );
-
         }
       );
 
@@ -468,9 +392,7 @@ async function startCamera() {
   } catch (error) {
 
     cameraError(error);
-
   }
-
 }
 
 
@@ -478,26 +400,21 @@ async function startCamera() {
  * SEARCH CAMERAS
  *************************************************/
 
-async function searchCameras(
-  open = true
-) {
+async function searchCameras(open = true) {
 
   try {
 
     cameras =
       (
-        await Html5Qrcode
-          .getCameras()
+        await Html5Qrcode.getCameras()
       ) || [];
 
     fillCameraList();
 
     if (!cameras.length) {
-
       throw new Error(
         "No camera detected."
       );
-
     }
 
     if (open) {
@@ -509,15 +426,12 @@ async function searchCameras(
         );
 
       await openCamera();
-
     }
 
   } catch (error) {
 
     cameraError(error);
-
   }
-
 }
 
 
@@ -558,28 +472,22 @@ function fillCameraList() {
       select.appendChild(
         option
       );
-
     }
   );
 
   document
-    .getElementById(
-      "controls"
-    )
+    .getElementById("controls")
     .style.display =
       cameras.length
         ? "block"
         : "none";
 
   document
-    .getElementById(
-      "switchBtn"
-    )
+    .getElementById("switchBtn")
     .style.display =
       cameras.length > 1
         ? "block"
         : "none";
-
 }
 
 
@@ -604,28 +512,22 @@ async function openCamera() {
       try {
         qr.clear();
       } catch (error) {}
-
     }
-
 
     qr =
       new Html5Qrcode(
         "reader"
       );
 
-
     const camera =
       cameras[current];
-
 
     if (!camera) {
 
       throw new Error(
         "Selected camera is unavailable."
       );
-
     }
-
 
     setResult(
       "info",
@@ -637,7 +539,6 @@ async function openCamera() {
       "..."
     );
 
-
     await qr.start(
 
       camera.id,
@@ -647,10 +548,7 @@ async function openCamera() {
         fps: 10,
 
         qrbox:
-          function(
-            width,
-            height
-          ) {
+          function(width, height) {
 
             const size =
               Math.floor(
@@ -664,11 +562,9 @@ async function openCamera() {
               width: size,
               height: size
             };
-
           },
 
         aspectRatio: 1
-
       },
 
       function(decodedText) {
@@ -676,46 +572,32 @@ async function openCamera() {
         checkPlayer(
           decodedText
         );
-
       },
 
       function() {
-
         // Ignore normal scan misses.
-
       }
-
     );
 
-
     document
-      .getElementById(
-        "startBtn"
-      )
+      .getElementById("startBtn")
       .style.display =
         "none";
 
-
     document
-      .getElementById(
-        "controls"
-      )
+      .getElementById("controls")
       .style.display =
         "block";
-
 
     setResult(
       "info",
       "Camera ready — scan a participant QR code."
     );
 
-
   } catch (error) {
 
     cameraError(error);
-
   }
-
 }
 
 
@@ -723,15 +605,12 @@ async function openCamera() {
  * CHOOSE CAMERA
  *************************************************/
 
-async function chooseCamera(
-  index
-) {
+async function chooseCamera(index) {
 
   current =
     Number(index);
 
   await openCamera();
-
 }
 
 
@@ -741,9 +620,7 @@ async function chooseCamera(
 
 async function switchCamera() {
 
-  if (
-    cameras.length < 2
-  ) {
+  if (cameras.length < 2) {
     return;
   }
 
@@ -756,7 +633,6 @@ async function switchCamera() {
   fillCameraList();
 
   await openCamera();
-
 }
 
 
@@ -774,39 +650,28 @@ async function stopCamera() {
     ) {
 
       await qr.stop();
-
     }
 
     if (qr) {
-
       qr.clear();
-
     }
 
   } catch (error) {}
 
-
   document
-    .getElementById(
-      "startBtn"
-    )
+    .getElementById("startBtn")
     .style.display =
       "block";
 
-
   document
-    .getElementById(
-      "controls"
-    )
+    .getElementById("controls")
     .style.display =
       "none";
-
 
   setResult(
     "info",
     "Camera stopped."
   );
-
 }
 
 
@@ -824,24 +689,19 @@ function manualCheckIn() {
   const value =
     input.value.trim();
 
-
   if (!value) {
 
     return setResult(
       "error",
       "<b>Enter a QR / Guest ID.</b>"
     );
-
   }
 
-
   input.value = "";
-
 
   checkPlayer(
     value
   );
-
 }
 
 
@@ -852,21 +712,16 @@ function manualCheckIn() {
 function checkPlayer(raw) {
 
   const code =
-    String(
-      raw || ""
-    )
-    .trim()
-    .toUpperCase();
-
+    String(raw || "")
+      .trim()
+      .toUpperCase();
 
   if (!code) {
     return;
   }
 
-
   const now =
     Date.now();
-
 
   /***********************************************
    * PREVENT RAPID DUPLICATE SCANS
@@ -876,7 +731,6 @@ function checkPlayer(raw) {
     return;
   }
 
-
   if (
     code === lastCode &&
     now - lastTime < 5000
@@ -884,9 +738,8 @@ function checkPlayer(raw) {
     return;
   }
 
-
   /***********************************************
-   * VERIFY LOCAL CONFIG
+   * VERIFY CONFIGURATION
    ***********************************************/
 
   if (!SCANNER_KEY) {
@@ -895,9 +748,15 @@ function checkPlayer(raw) {
       "error",
       "<b>SCANNER KEY NOT CONFIGURED.</b>"
     );
-
   }
 
+  if (!API_URL) {
+
+    return setResult(
+      "error",
+      "<b>ATTENDANCE SERVER NOT CONFIGURED.</b>"
+    );
+  }
 
   busy = true;
 
@@ -907,17 +766,12 @@ function checkPlayer(raw) {
   lastTime =
     now;
 
-
-  if (
-    navigator.vibrate
-  ) {
+  if (navigator.vibrate) {
 
     navigator.vibrate(
       80
     );
-
   }
-
 
   setResult(
     "info",
@@ -926,9 +780,8 @@ function checkPlayer(raw) {
     "..."
   );
 
-
   /***********************************************
-   * JSONP CALLBACK
+   * CREATE JSONP CALLBACK
    ***********************************************/
 
   const callback =
@@ -940,12 +793,10 @@ function checkPlayer(raw) {
       100000
     );
 
-
   const script =
     document.createElement(
       "script"
     );
-
 
   let timer =
     setTimeout(
@@ -974,21 +825,16 @@ function checkPlayer(raw) {
 
     } catch (error) {}
 
-
     if (
       script.parentNode
     ) {
 
       script.remove();
-
     }
-
   }
 
 
-  function finishError(
-    message
-  ) {
+  function finishError(message) {
 
     cleanup();
 
@@ -1000,13 +846,10 @@ function checkPlayer(raw) {
       "<b>CONNECTION ERROR</b><br>" +
       esc(message)
     );
-
   }
 
 
-  window[
-    callback
-  ] =
+  window[callback] =
     function(data) {
 
       cleanup();
@@ -1018,7 +861,6 @@ function checkPlayer(raw) {
             "Invalid server response."
         }
       );
-
     };
 
 
@@ -1028,7 +870,6 @@ function checkPlayer(raw) {
       finishError(
         "Could not connect to the attendance server."
       );
-
     };
 
 
@@ -1049,7 +890,6 @@ function checkPlayer(raw) {
 
       callback:
         callback
-
     });
 
 
@@ -1063,7 +903,6 @@ function checkPlayer(raw) {
     .appendChild(
       script
     );
-
 }
 
 
@@ -1072,7 +911,6 @@ function checkPlayer(raw) {
  *************************************************/
 
 function displayResult(data) {
-
 
   /***********************************************
    * SUCCESS
@@ -1112,7 +950,6 @@ function displayResult(data) {
         ) +
 
         "</div>";
-
     }
 
 
@@ -1149,20 +986,15 @@ function displayResult(data) {
         ""
       ) +
       "</div>"
-
     );
 
 
-    if (
-      navigator.vibrate
-    ) {
+    if (navigator.vibrate) {
 
       navigator.vibrate(
         [100, 70, 100]
       );
-
     }
-
   }
 
 
@@ -1213,9 +1045,7 @@ function displayResult(data) {
         data.firstCheckIn ||
         ""
       )
-
     );
-
   }
 
 
@@ -1252,20 +1082,15 @@ function displayResult(data) {
       "<b>CHECK-IN NOT ALLOWED</b>" +
 
       "<br>Please proceed to the payment area."
-
     );
 
 
-    if (
-      navigator.vibrate
-    ) {
+    if (navigator.vibrate) {
 
       navigator.vibrate(
         [250, 100, 250]
       );
-
     }
-
   }
 
 
@@ -1284,14 +1109,12 @@ function displayResult(data) {
 
       "<b>⛔ UNAUTHORIZED SCANNER</b>" +
       "<br>Please check the scanner key."
-
     );
-
   }
 
 
   /***********************************************
-   * NOT FOUND / OTHER ERROR
+   * OTHER ERROR
    ***********************************************/
 
   else {
@@ -1321,17 +1144,12 @@ function displayResult(data) {
             esc(data.id)
           : ""
       )
-
     );
-
   }
 
 
   /***********************************************
    * SCAN LOCK
-   *
-   * Keep result visible and prevent camera from
-   * immediately scanning the same QR repeatedly.
    ***********************************************/
 
   setTimeout(
@@ -1343,7 +1161,6 @@ function displayResult(data) {
     },
     3000
   );
-
 }
 
 
@@ -1365,14 +1182,12 @@ function cameraError(error) {
       ? error.message
       : String(error);
 
-
   let help =
     "Press START CAMERA again or use manual check-in.";
 
 
   if (
-    name ===
-    "NotAllowedError" ||
+    name === "NotAllowedError" ||
     /permission|denied/i.test(
       message
     )
@@ -1380,27 +1195,22 @@ function cameraError(error) {
 
     help =
       "Camera permission was denied. Allow camera access for this website and press START CAMERA again.";
-
   }
 
   else if (
-    name ===
-    "NotFoundError"
+    name === "NotFoundError"
   ) {
 
     help =
       "No camera was found on this device.";
-
   }
 
   else if (
-    name ===
-    "NotReadableError"
+    name === "NotReadableError"
   ) {
 
     help =
       "The camera may already be in use by another app. Close the other app and try again.";
-
   }
 
 
@@ -1410,14 +1220,11 @@ function cameraError(error) {
 
     "<b>CAMERA ERROR</b><br>" +
     esc(help)
-
   );
 
 
   document
-    .getElementById(
-      "debug"
-    )
+    .getElementById("debug")
     .textContent =
       "Browser error: " +
       name +
@@ -1426,12 +1233,9 @@ function cameraError(error) {
 
 
   document
-    .getElementById(
-      "startBtn"
-    )
+    .getElementById("startBtn")
     .style.display =
       "block";
-
 }
 
 </script>
