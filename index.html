@@ -325,7 +325,6 @@ input{
     margin-top:4px;
   }
 }
-}
 </style>
 </head>
 
@@ -440,12 +439,39 @@ let lastTime = 0;
 
 let pausedForResult = false;
 
+const NOTICE_DURATION_MS = 20000;
+let noticeTimer = null;
+let noticeGeneration = 0;
+
+function cancelNoticeTimer(){
+  clearTimeout(noticeTimer);
+  noticeTimer = null;
+  noticeGeneration++;
+}
+
+function scheduleNoticeDismissal(){
+  cancelNoticeTimer();
+  const generation = noticeGeneration;
+  noticeTimer = setTimeout(function(){
+    if(generation !== noticeGeneration || busy) return;
+    const result = document.getElementById("result");
+    result.style.display = "none";
+    result.innerHTML = "";
+    if(pausedForResult && qr && qr.isScanning){
+      scanNextPlayer();
+      result.style.display = "none";
+    }
+  }, NOTICE_DURATION_MS);
+}
+
+
 
 /*************************************************
  * RESULT MESSAGE
  *************************************************/
 
 function setResult(type,html){
+  cancelNoticeTimer();
 
   const result =
     document.getElementById("result");
@@ -1075,7 +1101,7 @@ function checkPlayer(
         );
 
       },
-      15000
+      30000
     );
 
 
@@ -1110,6 +1136,7 @@ function checkPlayer(
     );
 
     showNextButtonIfPaused();
+    scheduleNoticeDismissal();
   }
 
 
@@ -1132,7 +1159,7 @@ function checkPlayer(
     function(){
 
       finishError(
-        "Could not connect to the Apps Script attendance server."
+        "Could not confirm the server response. Check the registration sheet before retrying."
       );
     };
 
@@ -1461,6 +1488,7 @@ function displayResult(data){
   busy = false;
 
   showNextButtonIfPaused();
+  scheduleNoticeDismissal();
 }
 
 
@@ -1497,6 +1525,7 @@ function showNextButtonIfPaused(){
  *************************************************/
 
 function scanNextPlayer(){
+  cancelNoticeTimer();
 
   /*
    * Reset duplicate lock so the
