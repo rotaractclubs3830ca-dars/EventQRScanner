@@ -1337,12 +1337,20 @@ function displayResult(data){
       ) +
 
       "<div class='payment-instruction'>" +
-      "Please proceed to the PAYMENT AREA first." +
-      "</div>" +
+(
+  String(data.payment || "").trim().toUpperCase() === "N/A"
+    ? "Please proceed to the REGISTRATION AREA for verification."
+    : "Please proceed to the PAYMENT AREA first."
+) +
+"</div>" +
 
-      "<div class='details'>" +
-      "After payment is confirmed, scan the QR code again." +
-      "</div>"
+"<div class='details'>" +
+(
+  String(data.payment || "").trim().toUpperCase() === "N/A"
+    ? "After registration verification, scan the QR code again."
+    : "After payment is confirmed, scan the QR code again."
+) +
+"</div>"
     );
 
 
