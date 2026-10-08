@@ -1092,6 +1092,8 @@ function checkPlayer(
     );
 
 
+  let requestFinished = false;
+
   let timer =
     setTimeout(
       function(){
@@ -1125,6 +1127,9 @@ function checkPlayer(
 
   function finishError(message){
 
+    if(requestFinished) return;
+    requestFinished = true;
+
     cleanup();
 
     busy = false;
@@ -1142,6 +1147,9 @@ function checkPlayer(
 
   window[callback] =
     function(data){
+
+      if(requestFinished) return;
+      requestFinished = true;
 
       cleanup();
 
